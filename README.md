@@ -141,8 +141,29 @@ MIT License — use it, build on it, make something alive.
 
 ---
 
-## Origin
+## See it in Action — ANIMA: Numen
 
-The Resonance Web was born as the core engine of [ANIMA](https://github.com/Dosage2AG), a god-game where you guide civilizations as a formless divine presence. The web grew beyond the game. It became its own thing.
+The Resonance Web was born as the core engine of **ANIMA: Numen**, a god-game where you guide civilizations as a formless divine presence. 9000+ lines of living simulation, 27 interconnected systems, all running on this engine.
+
+**[Play ANIMA free in your browser →](https://dosage2ag.itch.io/animanumen)**
+
+In ANIMA, the Resonance Web powers everything:
+- Creatures form tribes through shared bonds — **the web threads are their relationships**
+- Knowledge spreads by observation and oral tradition — **resonance events carry what was learned**
+- When an elder dies, grief cascades through every creature who knew them — **death shockwaves through the web**
+- If every creature who knew farming is killed, farming is forgotten forever — **knowledge lost from the network permanently**
+- Dreams collide with memories to create breakthroughs — **resonance accumulation triggers emergence**
+
+The engine demo shows the mechanics. The game shows what they become.
+
+**[Engine Demo (minimal)](https://dosage2ag.github.io/resonance-web/demo.html)** | **[ANIMA: Numen (full game)](https://dosage2ag.itch.io/animanumen)**
+
+---
+
+## License
+
+MIT License — use it, build on it, make something alive.
+
+---
 
 *Built by a human and an AI, in Madrid, with no funding, no team, and no safety net.*
