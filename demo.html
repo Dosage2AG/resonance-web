@@ -61,30 +61,27 @@
   var world = ResonanceWeb.initFromSeed("demo-world");
   var clusters = world.generate(Math.min(W, H));
 
-  // Create creatures
+  // Create creatures — use a fixed-size pool to prevent memory growth
+  var MAX_CREATURES = 80;
   var creatures = [];
   var idCounter = 0;
 
   function spawnCreature(x, y, dna){
+    if(creatures.length >= MAX_CREATURES) return null;
     var id = 'c' + (idCounter++);
     var c = {
       id: id, x: x, y: y, vx: 0, vy: 0,
-      mood: 0, e: 50, maxE: 100, alive: true, dying: false,
+      mood: 0, e: 50, maxE: 100, alive: true,
       age: 0, maxAge: 800 + Math.random() * 1200,
       size: 2 + (dna ? dna.sz * 4 : Math.random() * 4),
       social: dna ? dna.social : 0.3 + Math.random() * 0.5,
-      color: dna ? dnaColor(dna) : '#c8a84a'
+      cr: dna ? Math.floor(150 + dna.agg * 80) : 200,
+      cg: dna ? Math.floor(140 + dna.social * 60) : 168,
+      cb: dna ? Math.floor(60 + dna.resilience * 40) : 74
     };
     creatures.push(c);
     ResonanceWeb.addNode(id, x, y, 'creature');
     return c;
-  }
-
-  function dnaColor(dna){
-    var r = Math.floor(150 + dna.agg * 80);
-    var g = Math.floor(140 + dna.social * 60);
-    var b = Math.floor(60 + dna.resilience * 40);
-    return 'rgb(' + r + ',' + g + ',' + b + ')';
   }
 
   // Spawn from clusters
@@ -110,29 +107,32 @@
     }
   }
 
-  // Visual ripples (separate from engine — just for display)
+  // Visual ripples
   var visualRipples = [];
 
-  // Click to emit
   canvas.addEventListener('click', function(e){
     if(!firstClick){ titleOverlay.style.opacity = '0'; firstClick = true; }
     ResonanceWeb.emit({x: e.clientX, y: e.clientY, intensity: 0.8, polarity: 0.8, type: 'tap', sourceId: null});
-    visualRipples.push({x: e.clientX, y: e.clientY, r: 0, maxR: 200, color: '#d4a843', alpha: 0.6});
+    visualRipples.push({x: e.clientX, y: e.clientY, r: 0, maxR: 200, cr: 212, cg: 168, cb: 67, alpha: 0.6});
   });
 
   canvas.addEventListener('contextmenu', function(e){
     e.preventDefault();
     if(!firstClick){ titleOverlay.style.opacity = '0'; firstClick = true; }
     ResonanceWeb.emit({x: e.clientX, y: e.clientY, intensity: 0.8, polarity: -0.8, type: 'shadow', sourceId: null});
-    visualRipples.push({x: e.clientX, y: e.clientY, r: 0, maxR: 200, color: '#4a6a8a', alpha: 0.6});
+    visualRipples.push({x: e.clientX, y: e.clientY, r: 0, maxR: 200, cr: 74, cg: 106, cb: 138, alpha: 0.6});
   });
 
-  // Simulation loop
+  // Cleanup interval — remove dead creatures periodically to prevent array bloat
+  var cleanupTimer = 0;
+
   function update(){
-    // Move creatures
+    var aliveCount = 0;
+
     for(var i = 0; i < creatures.length; i++){
       var c = creatures[i];
       if(!c.alive) continue;
+      aliveCount++;
 
       c.age++;
       c.e -= 0.02;
@@ -144,9 +144,9 @@
       // Social: drift toward bonded creatures
       var node = ResonanceWeb.getNodes()[c.id];
       if(node){
-        var edges = Object.keys(node.edges);
-        for(var ei = 0; ei < edges.length; ei++){
-          var target = ResonanceWeb.getNodes()[edges[ei]];
+        var edgeKeys = Object.keys(node.edges);
+        for(var ei = 0; ei < edgeKeys.length; ei++){
+          var target = ResonanceWeb.getNodes()[edgeKeys[ei]];
           if(target){
             var dx = target.x - c.x, dy = target.y - c.y;
             var d = Math.sqrt(dx*dx + dy*dy);
@@ -158,10 +158,8 @@
         }
       }
 
-      // Damping
       c.vx *= 0.95;
       c.vy *= 0.95;
-
       c.x += c.vx;
       c.y += c.vy;
 
@@ -171,38 +169,43 @@
       if(c.y < 0) c.y = H;
       if(c.y > H) c.y = 0;
 
-      // Update node position
       if(node){ node.x = c.x; node.y = c.y; }
 
-      // Form new bonds with nearby creatures
-      for(var j = i+1; j < creatures.length; j++){
-        if(!creatures[j].alive) continue;
-        var dx2 = c.x - creatures[j].x, dy2 = c.y - creatures[j].y;
-        var d2 = Math.sqrt(dx2*dx2 + dy2*dy2);
-        if(d2 < 50){
-          var existing = node ? (node.edges[creatures[j].id] || 0) : 0;
-          ResonanceWeb.updateEdge(c.id, creatures[j].id, Math.min(1, existing + 0.001));
+      // Form new bonds (only check a few neighbors per frame to reduce cost)
+      if(i % 3 === cleanupTimer % 3){
+        for(var j = i+1; j < creatures.length; j++){
+          if(!creatures[j].alive) continue;
+          var dx2 = c.x - creatures[j].x, dy2 = c.y - creatures[j].y;
+          var d2 = dx2*dx2 + dy2*dy2;
+          if(d2 < 2500){ // 50px squared
+            var existing = node ? (node.edges[creatures[j].id] || 0) : 0;
+            ResonanceWeb.updateEdge(c.id, creatures[j].id, Math.min(1, existing + 0.001));
+          }
         }
       }
 
       // Death
       if(c.age > c.maxAge || c.e <= 0){
         c.alive = false;
-        c.dying = true;
         ResonanceWeb.removeNode(c.id);
-        visualRipples.push({x: c.x, y: c.y, r: 0, maxR: 150, color: '#8a4a3a', alpha: 0.4});
+        visualRipples.push({x: c.x, y: c.y, r: 0, maxR: 150, cr: 138, cg: 74, cb: 58, alpha: 0.4});
       }
     }
 
-    // Propagate resonance
+    // Cleanup dead creatures every 200 frames
+    cleanupTimer++;
+    if(cleanupTimer % 200 === 0){
+      creatures = creatures.filter(function(c){ return c.alive; });
+    }
+
     ResonanceWeb.propagate(creatures);
     ResonanceWeb.updateWorldMemory();
 
-    // Respawn occasionally to keep demo alive
-    var aliveCount = creatures.filter(function(c){ return c.alive; }).length;
+    // Respawn to keep demo alive
     if(aliveCount < 15 && Math.random() < 0.02){
-      var parent = creatures.filter(function(c){ return c.alive; })[Math.floor(Math.random() * aliveCount)];
-      if(parent){
+      var alive = creatures.filter(function(c){ return c.alive; });
+      if(alive.length > 0){
+        var parent = alive[Math.floor(Math.random() * alive.length)];
         spawnCreature(parent.x + (Math.random()-0.5)*30, parent.y + (Math.random()-0.5)*30);
       }
     }
@@ -217,11 +220,11 @@
     // Draw edges
     for(var id in nodes){
       var n = nodes[id];
-      var edges = Object.keys(n.edges);
-      for(var i = 0; i < edges.length; i++){
-        var target = nodes[edges[i]];
-        if(!target || edges[i] <= id) continue;
-        var weight = n.edges[edges[i]];
+      var edgeKeys = Object.keys(n.edges);
+      for(var i = 0; i < edgeKeys.length; i++){
+        var target = nodes[edgeKeys[i]];
+        if(!target || edgeKeys[i] <= id) continue;
+        var weight = n.edges[edgeKeys[i]];
         ctx.beginPath();
         ctx.moveTo(n.x, n.y);
         ctx.lineTo(target.x, target.y);
@@ -244,53 +247,47 @@
     // Draw creatures
     for(var i = 0; i < creatures.length; i++){
       var c = creatures[i];
-      if(!c.alive){
-        if(c.dying){
-          // Fade out dead
-          ctx.beginPath();
-          ctx.arc(c.x, c.y, c.size * 0.5, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(80, 50, 40, 0.3)';
-          ctx.fill();
-        }
-        continue;
-      }
+      if(!c.alive) continue;
 
       // Mood glow
       var glowR = c.size * 3 + Math.abs(c.mood) * 8;
-      var grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, glowR);
-      if(c.mood > 0){
-        grad.addColorStop(0, 'rgba(212, 168, 67, ' + (c.mood * 0.15) + ')');
-      } else {
-        grad.addColorStop(0, 'rgba(74, 106, 138, ' + (-c.mood * 0.15) + ')');
+      if(glowR > 1){
+        var grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, glowR);
+        if(c.mood > 0){
+          grad.addColorStop(0, 'rgba(212, 168, 67, ' + (c.mood * 0.15) + ')');
+        } else {
+          grad.addColorStop(0, 'rgba(74, 106, 138, ' + (-c.mood * 0.15) + ')');
+        }
+        grad.addColorStop(1, 'rgba(10, 10, 15, 0)');
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, glowR, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
       }
-      grad.addColorStop(1, 'rgba(10, 10, 15, 0)');
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, glowR, 0, Math.PI * 2);
-      ctx.fillStyle = grad;
-      ctx.fill();
 
       // Body
       ctx.beginPath();
       ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
-      ctx.fillStyle = c.color;
+      ctx.fillStyle = 'rgb(' + c.cr + ',' + c.cg + ',' + c.cb + ')';
       ctx.fill();
     }
 
     // Visual ripples
     for(var i = visualRipples.length - 1; i >= 0; i--){
-      var r = visualRipples[i];
-      r.r += 3;
-      r.alpha -= 0.008;
-      if(r.alpha <= 0){ visualRipples.splice(i, 1); continue; }
+      var vr = visualRipples[i];
+      vr.r += 3;
+      vr.alpha -= 0.008;
+      if(vr.alpha <= 0){ visualRipples.splice(i, 1); continue; }
       ctx.beginPath();
-      ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
-      ctx.strokeStyle = r.color.replace(')', ', ' + r.alpha + ')').replace('rgb', 'rgba');
+      ctx.arc(vr.x, vr.y, vr.r, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(' + vr.cr + ',' + vr.cg + ',' + vr.cb + ',' + vr.alpha + ')';
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
 
     // Stats
-    var alive = creatures.filter(function(c){ return c.alive; }).length;
+    var alive = 0;
+    for(var i = 0; i < creatures.length; i++) if(creatures[i].alive) alive++;
     var edgeCount = 0;
     for(var id in nodes) edgeCount += Object.keys(nodes[id].edges).length;
     statsEl.textContent = 'nodes: ' + alive + ' | bonds: ' + Math.floor(edgeCount/2) + ' | world memories: ' + memories.length + ' | accumulator: ' + ResonanceWeb.getHiddenAccumulator().toFixed(1);
