@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Spider & Butterfly Resonance Web</title>
+<meta name="description" content="A living network engine where every node is both signal and structure. Knowledge propagates through observation, dies when forgotten, and death strengthens the web.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap');
+
+  :root {
+    --gold: #d4a843;
+    --gold-dim: #a8863a;
+    --gold-glow: #e8c45a;
+    --bg: #08080c;
+    --bg-card: #0e0e14;
+    --bg-card-border: #1a1a24;
+    --text: #c8c0b0;
+    --text-dim: #7a7468;
+    --shadow-blue: #4a6a8a;
+    --death-red: #8a4a3a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ---- Canvas background ---- */
+  #bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  /* ---- Layout ---- */
+  .content {
+    position: relative;
+    z-index: 1;
+  }
+
+  section {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 80px 32px;
+  }
+
+  /* ---- Hero ---- */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    max-width: 100%;
+    padding: 40px 24px;
+  }
+
+  .hero-eyebrow {
+    font-size: 11px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 24px;
+  }
+
+  .hero h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: clamp(36px, 7vw, 72px);
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 2px;
+    line-height: 1.1;
+    margin-bottom: 28px;
+  }
+
+  .hero h1 span {
+    display: block;
+    font-size: 0.45em;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-top: 12px;
+  }
+
+  .hero-subtitle {
+    font-size: 18px;
+    color: var(--text-dim);
+    max-width: 560px;
+    margin-bottom: 48px;
+    line-height: 1.8;
+  }
+
+  .hero-buttons {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* ---- Buttons ---- */
+  .btn {
+    display: inline-block;
+    padding: 14px 36px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+  }
+
+  .btn-gold {
+    background: var(--gold);
+    color: #0a0a0f;
+    border: 1px solid var(--gold);
+  }
+  .btn-gold:hover {
+    background: var(--gold-glow);
+    box-shadow: 0 0 30px rgba(212, 168, 67, 0.3);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--gold-dim);
+    border: 1px solid var(--bg-card-border);
+  }
+  .btn-outline:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+
+  /* ---- Section headers ---- */
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 36px;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 24px;
+    line-height: 1.2;
+  }
+
+  h3 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+
+  /* ---- Divider ---- */
+  .divider {
+    width: 60px;
+    height: 1px;
+    background: var(--gold-dim);
+    margin: 0 auto 80px;
+    opacity: 0.4;
+  }
+
+  /* ---- Principles ---- */
+  .principles {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+    margin-top: 40px;
+  }
+
+  .principle {
+    border-left: 1px solid var(--bg-card-border);
+    padding-left: 24px;
+  }
+
+  .principle p {
+    color: var(--text-dim);
+    font-size: 15px;
+  }
+
+  /* ---- Use cases ---- */
+  .use-cases {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+    margin-top: 40px;
+  }
+
+  .use-case {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-card-border);
+    padding: 32px 28px;
+    border-radius: 3px;
+    transition: border-color 0.3s ease;
+  }
+
+  .use-case:hover {
+    border-color: var(--gold-dim);
+  }
+
+  .use-case-icon {
+    font-size: 28px;
+    margin-bottom: 16px;
+    display: block;
+    opacity: 0.7;
+  }
+
+  .use-case h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+
+  .use-case p {
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* ---- Code block ---- */
+  .code-block {
+    background: #0c0c12;
+    border: 1px solid var(--bg-card-border);
+    border-radius: 3px;
+    padding: 28px 32px;
+    margin-top: 32px;
+    overflow-x: auto;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text-dim);
+  }
+
+  .code-block .kw { color: var(--shadow-blue); }
+  .code-block .str { color: var(--death-red); }
+  .code-block .fn { color: var(--gold-dim); }
+  .code-block .cm { color: #444; font-style: italic; }
+  .code-block .num { color: #7a8a6a; }
+
+  /* ---- ANIMA section ---- */
+  .anima-section {
+    text-align: center;
+  }
+
+  .anima-section .anima-desc {
+    max-width: 620px;
+    margin: 0 auto 40px;
+    color: var(--text-dim);
+    font-size: 16px;
+  }
+
+  blockquote {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 22px;
+    font-style: italic;
+    color: var(--text-dim);
+    border-left: 2px solid var(--gold-dim);
+    padding-left: 24px;
+    margin: 40px auto;
+    max-width: 560px;
+    text-align: left;
+    line-height: 1.6;
+  }
+
+  /* ---- Stats row ---- */
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: 60px;
+    margin: 48px 0;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 40px;
+    font-weight: 600;
+    color: var(--gold);
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* ---- Contact ---- */
+  .contact-section {
+    text-align: center;
+    padding-bottom: 120px;
+  }
+
+  .contact-section p {
+    color: var(--text-dim);
+    font-size: 15px;
+    margin-bottom: 32px;
+  }
+
+  .contact-section a.email-link {
+    color: var(--gold);
+    text-decoration: none;
+    font-size: 16px;
+    border-bottom: 1px solid var(--gold-dim);
+    padding-bottom: 2px;
+    transition: border-color 0.3s;
+  }
+  .contact-section a.email-link:hover {
+    border-color: var(--gold);
+  }
+
+  /* ---- Footer ---- */
+  footer {
+    text-align: center;
+    padding: 40px 24px;
+    font-size: 12px;
+    color: var(--text-dim);
+    opacity: 0.5;
+    border-top: 1px solid var(--bg-card-border);
+  }
+
+  footer a {
+    color: var(--gold-dim);
+    text-decoration: none;
+  }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 600px) {
+    section { padding: 60px 20px; }
+    .stats { gap: 32px; }
+    .hero-buttons { flex-direction: column; align-items: center; }
+    .btn { width: 220px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="content">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow">Open Source &middot; MIT License</div>
+    <h1>
+      The Resonance Web
+      <span>A living network engine where every node is both signal and structure</span>
+    </h1>
+    <p class="hero-subtitle">
+      Every creature is simultaneously butterfly and spider. Actions create ripples.
+      Bonds carry them. Death strengthens the web. The network remembers what the nodes cannot.
+    </p>
+    <div class="hero-buttons">
+      <a href="demo.html" class="btn btn-gold">Try the Live Demo</a>
+      <a href="https://github.com/Dosage2AG/resonance-web" class="btn btn-outline">View on GitHub</a>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- WHAT IT IS -->
+  <section>
+    <div class="section-label">The Idea</div>
+    <h2>Not a social graph. A living nervous system.</h2>
+
+    <div class="principles">
+      <div class="principle">
+        <h3>Nothing is known until observed</h3>
+        <p>Nodes earn knowledge through proximity and interaction, not configuration. You don't tell the web what matters -- it discovers it.</p>
+      </div>
+      <div class="principle">
+        <h3>Relationships are memory</h3>
+        <p>Bonds form from shared experience and fade with distance. When a bond breaks, both sides feel it. The stronger the connection, the deeper the grief.</p>
+      </div>
+      <div class="principle">
+        <h3>Actions ripple through the web</h3>
+        <p>Every event propagates outward, decaying with distance and amplifying through strong bonds. Warmth heals, shadow scatters. Ripples travel up to four hops deep.</p>
+      </div>
+      <div class="principle">
+        <h3>Death strengthens the web</h3>
+        <p>When a node is removed, its accumulated resonance feeds the collective. Its strongest memory becomes a permanent mark on the world. A hidden accumulator tracks every death -- it is never displayed, but it is always there.</p>
+      </div>
+      <div class="principle">
+        <h3>Knowledge can be permanently lost</h3>
+        <p>If every node carrying a piece of knowledge is removed, that knowledge is gone forever. There is no backup. The web is mortal.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- STATS -->
+  <section>
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-value">~270</span>
+        <span class="stat-label">Lines of Code</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Dependencies</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">4kb</span>
+        <span class="stat-label">Gzipped</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">MIT</span>
+        <span class="stat-label">License</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- USE CASES -->
+  <section>
+    <div class="section-label">Applications</div>
+    <h2>Where the web grows</h2>
+
+    <div class="use-cases">
+      <div class="use-case">
+        <span class="use-case-icon">&loz;</span>
+        <h3>Game Development</h3>
+        <p>Emergent AI ecosystems where creatures form real relationships, carry real memories, and leave real scars on the world when they die.</p>
+      </div>
+      <div class="use-case">
+        <span class="use-case-icon">&bull;</span>
+        <h3>Education</h3>
+        <p>Simulate how knowledge spreads and dies in organizations. Watch what happens when key knowledge-holders leave and take institutional memory with them.</p>
+      </div>
+      <div class="use-case">
+        <span class="use-case-icon">&sim;</span>
+        <h3>AI Agents</h3>
+        <p>Earned-knowledge frameworks where agents learn by observation rather than pretraining. No omniscience. Every piece of understanding is acquired and losable.</p>
+      </div>
+      <div class="use-case">
+        <span class="use-case-icon">&sect;</span>
+        <h3>Social Simulation</h3>
+        <p>Model influence propagation, cultural transmission, and the mechanics of collective grief. Watch communities form, fracture, and heal.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- QUICK START -->
+  <section>
+    <div class="section-label">Integration</div>
+    <h2>Drop it in</h2>
+    <p style="color: var(--text-dim); margin-bottom: 8px;">Single file. No build step. No dependencies.</p>
+
+    <div class="code-block">
+<span class="cm">// Initialize a world from a seed</span>
+<span class="kw">var</span> world = ResonanceWeb.<span class="fn">initFromSeed</span>(<span class="str">"my-world"</span>);
+
+<span class="cm">// Add living nodes</span>
+ResonanceWeb.<span class="fn">addNode</span>(<span class="str">"alice"</span>, <span class="num">100</span>, <span class="num">200</span>, <span class="str">"creature"</span>);
+ResonanceWeb.<span class="fn">addNode</span>(<span class="str">"bob"</span>, <span class="num">150</span>, <span class="num">210</span>, <span class="str">"creature"</span>);
+
+<span class="cm">// Form a bond</span>
+ResonanceWeb.<span class="fn">updateEdge</span>(<span class="str">"alice"</span>, <span class="str">"bob"</span>, <span class="num">0.8</span>);
+
+<span class="cm">// Send a ripple -- warmth heals, shadow scatters</span>
+ResonanceWeb.<span class="fn">emit</span>({
+  x: <span class="num">100</span>, y: <span class="num">200</span>,
+  intensity: <span class="num">0.7</span>,
+  polarity: <span class="num">0.5</span>,
+  type: <span class="str">"interaction"</span>
+});
+
+<span class="cm">// Let it propagate</span>
+ResonanceWeb.<span class="fn">propagate</span>(creatures);
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ANIMA -->
+  <section class="anima-section">
+    <div class="section-label">Origin</div>
+    <h2>Born from ANIMA</h2>
+    <p class="anima-desc">
+      The Resonance Web was created as the core engine of ANIMA -- a god-game where you guide civilizations as a formless divine presence. Creatures live, bond, learn, reproduce, and die in a world that remembers every vibration. The web grew beyond the game. It became its own thing.
+    </p>
+    <blockquote>
+      Every creature is simultaneously butterfly AND spider. Every action creates ripples. Every bond is a web thread. Death strengthens the web. The web IS the simulation.
+    </blockquote>
+    <p style="color: var(--text-dim); font-size: 14px; margin-top: 40px;">
+      Built by Dosage2ag in Madrid. A human and an AI, with no funding, no team, and no safety net.
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- CONTACT -->
+  <section class="contact-section">
+    <div class="section-label">Get in Touch</div>
+    <h2>Licensing & Collaboration</h2>
+    <p>
+      The Resonance Web is MIT licensed and free to use. For commercial licensing,
+      integration support, or collaboration inquiries:
+    </p>
+    <a href="mailto:contact@resonanceweb.dev" class="email-link">contact@resonanceweb.dev</a>
+  </section>
+
+</div>
+
+<footer>
+  <p>The Spider & Butterfly Resonance Web &middot; <a href="https://github.com/Dosage2AG/resonance-web">GitHub</a> &middot; MIT License &middot; 2026</p>
+</footer>
+
+<!-- Ambient background animation -->
+<script>
+(function(){
+  var c = document.getElementById('bg-canvas');
+  var ctx = c.getContext('2d');
+  var W, H;
+  var particles = [];
+  var edges = [];
+
+  function resize(){
+    W = c.width = window.innerWidth;
+    H = c.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Spawn ambient particles
+  var NUM = 40;
+  for(var i = 0; i < NUM; i++){
+    particles.push({
+      x: Math.random() * 2000,
+      y: Math.random() * 2000,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: 1.5 + Math.random() * 2,
+      pulse: Math.random() * Math.PI * 2
+    });
+  }
+
+  function loop(){
+    ctx.fillStyle = 'rgba(8, 8, 12, 0.08)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Update & draw particles
+    for(var i = 0; i < particles.length; i++){
+      var p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.pulse += 0.01;
+
+      // Wrap
+      if(p.x < -20) p.x = W + 20;
+      if(p.x > W + 20) p.x = -20;
+      if(p.y < -20) p.y = H + 20;
+      if(p.y > H + 20) p.y = -20;
+
+      // Draw connections
+      for(var j = i + 1; j < particles.length; j++){
+        var q = particles[j];
+        var dx = p.x - q.x, dy = p.y - q.y;
+        var d = Math.sqrt(dx*dx + dy*dy);
+        if(d < 200){
+          var alpha = (1 - d / 200) * 0.15;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(q.x, q.y);
+          ctx.strokeStyle = 'rgba(212, 168, 67, ' + alpha + ')';
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+
+      // Draw particle
+      var glow = 0.3 + Math.sin(p.pulse) * 0.15;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(212, 168, 67, ' + glow + ')';
+      ctx.fill();
+    }
+
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
+
+</body>
+</html>
