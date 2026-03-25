@@ -1,0 +1,24 @@
+{
+  "name": "resonance-web",
+  "version": "0.1.0",
+  "description": "A living network engine where every node is both signal and structure. Knowledge propagates through observation, strengthens through bonds, and dies when forgotten.",
+  "main": "resonance-web.js",
+  "keywords": [
+    "network",
+    "simulation",
+    "emergence",
+    "graph",
+    "knowledge-propagation",
+    "resonance",
+    "game-engine",
+    "ai-agents",
+    "social-simulation"
+  ],
+  "author": "Dosage2ag",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dosage2AG/resonance-web"
+  },
+  "homepage": "https://github.com/Dosage2AG/resonance-web"
+}

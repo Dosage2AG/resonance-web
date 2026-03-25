@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resonance Web — Live Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0f; color: #c8b88a; font-family: 'Georgia', serif; overflow: hidden; }
+  canvas { display: block; cursor: crosshair; }
+  #info {
+    position: absolute; top: 20px; left: 20px;
+    font-size: 14px; opacity: 0.6; line-height: 1.6;
+    pointer-events: none;
+  }
+  #info h1 { font-size: 18px; color: #d4a843; margin-bottom: 8px; }
+  #stats {
+    position: absolute; bottom: 20px; left: 20px;
+    font-size: 12px; opacity: 0.4; pointer-events: none;
+  }
+  #title-overlay {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center; pointer-events: none;
+    transition: opacity 2s;
+  }
+  #title-overlay h1 { font-size: 36px; color: #d4a843; letter-spacing: 4px; }
+  #title-overlay p { font-size: 14px; color: #8a7a5a; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div id="title-overlay">
+  <h1>THE RESONANCE WEB</h1>
+  <p>click to send warmth &middot; right-click to send shadow &middot; watch it ripple</p>
+</div>
+<div id="info">
+  <h1>Spider & Butterfly</h1>
+  Every node ripples. Every bond carries.<br>
+  Death strengthens the web.
+</div>
+<div id="stats"></div>
+<canvas id="c"></canvas>
+<script src="resonance-web.js"></script>
+<script>
+(function(){
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var W, H;
+  var titleOverlay = document.getElementById('title-overlay');
+  var statsEl = document.getElementById('stats');
+  var firstClick = false;
+
+  function resize(){
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Initialize world
+  var world = ResonanceWeb.initFromSeed("demo-world");
+  var clusters = world.generate(Math.min(W, H));
+
+  // Create creatures
+  var creatures = [];
+  var idCounter = 0;
+
+  function spawnCreature(x, y, dna){
+    var id = 'c' + (idCounter++);
+    var c = {
+      id: id, x: x, y: y, vx: 0, vy: 0,
+      mood: 0, e: 50, maxE: 100, alive: true, dying: false,
+      age: 0, maxAge: 800 + Math.random() * 1200,
+      size: 2 + (dna ? dna.sz * 4 : Math.random() * 4),
+      social: dna ? dna.social : 0.3 + Math.random() * 0.5,
+      color: dna ? dnaColor(dna) : '#c8a84a'
+    };
+    creatures.push(c);
+    ResonanceWeb.addNode(id, x, y, 'creature');
+    return c;
+  }
+
+  function dnaColor(dna){
+    var r = Math.floor(150 + dna.agg * 80);
+    var g = Math.floor(140 + dna.social * 60);
+    var b = Math.floor(60 + dna.resilience * 40);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+
+  // Spawn from clusters
+  for(var ci = 0; ci < clusters.length; ci++){
+    var cl = clusters[ci];
+    for(var j = 0; j < cl.size; j++){
+      var angle = Math.random() * Math.PI * 2;
+      var dist = Math.random() * 60;
+      spawnCreature(cl.x + Math.cos(angle)*dist, cl.y + Math.sin(angle)*dist, cl.dnaBase);
+    }
+  }
+
+  // Form initial bonds within clusters
+  for(var i = 0; i < creatures.length; i++){
+    for(var j = i+1; j < creatures.length; j++){
+      var dx = creatures[i].x - creatures[j].x;
+      var dy = creatures[i].y - creatures[j].y;
+      var d = Math.sqrt(dx*dx + dy*dy);
+      if(d < 80){
+        var weight = 0.3 + Math.random() * 0.5;
+        ResonanceWeb.updateEdge(creatures[i].id, creatures[j].id, weight);
+      }
+    }
+  }
+
+  // Visual ripples (separate from engine — just for display)
+  var visualRipples = [];
+
+  // Click to emit
+  canvas.addEventListener('click', function(e){
+    if(!firstClick){ titleOverlay.style.opacity = '0'; firstClick = true; }
+    ResonanceWeb.emit({x: e.clientX, y: e.clientY, intensity: 0.8, polarity: 0.8, type: 'tap', sourceId: null});
+    visualRipples.push({x: e.clientX, y: e.clientY, r: 0, maxR: 200, color: '#d4a843', alpha: 0.6});
+  });
+
+  canvas.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    if(!firstClick){ titleOverlay.style.opacity = '0'; firstClick = true; }
+    ResonanceWeb.emit({x: e.clientX, y: e.clientY, intensity: 0.8, polarity: -0.8, type: 'shadow', sourceId: null});
+    visualRipples.push({x: e.clientX, y: e.clientY, r: 0, maxR: 200, color: '#4a6a8a', alpha: 0.6});
+  });
+
+  // Simulation loop
+  function update(){
+    // Move creatures
+    for(var i = 0; i < creatures.length; i++){
+      var c = creatures[i];
+      if(!c.alive) continue;
+
+      c.age++;
+      c.e -= 0.02;
+
+      // Wander
+      c.vx += (Math.random() - 0.5) * 0.3;
+      c.vy += (Math.random() - 0.5) * 0.3;
+
+      // Social: drift toward bonded creatures
+      var node = ResonanceWeb.getNodes()[c.id];
+      if(node){
+        var edges = Object.keys(node.edges);
+        for(var ei = 0; ei < edges.length; ei++){
+          var target = ResonanceWeb.getNodes()[edges[ei]];
+          if(target){
+            var dx = target.x - c.x, dy = target.y - c.y;
+            var d = Math.sqrt(dx*dx + dy*dy);
+            if(d > 30 && d < 200){
+              c.vx += (dx/d) * c.social * 0.05;
+              c.vy += (dy/d) * c.social * 0.05;
+            }
+          }
+        }
+      }
+
+      // Damping
+      c.vx *= 0.95;
+      c.vy *= 0.95;
+
+      c.x += c.vx;
+      c.y += c.vy;
+
+      // Wrap
+      if(c.x < 0) c.x = W;
+      if(c.x > W) c.x = 0;
+      if(c.y < 0) c.y = H;
+      if(c.y > H) c.y = 0;
+
+      // Update node position
+      if(node){ node.x = c.x; node.y = c.y; }
+
+      // Form new bonds with nearby creatures
+      for(var j = i+1; j < creatures.length; j++){
+        if(!creatures[j].alive) continue;
+        var dx2 = c.x - creatures[j].x, dy2 = c.y - creatures[j].y;
+        var d2 = Math.sqrt(dx2*dx2 + dy2*dy2);
+        if(d2 < 50){
+          var existing = node ? (node.edges[creatures[j].id] || 0) : 0;
+          ResonanceWeb.updateEdge(c.id, creatures[j].id, Math.min(1, existing + 0.001));
+        }
+      }
+
+      // Death
+      if(c.age > c.maxAge || c.e <= 0){
+        c.alive = false;
+        c.dying = true;
+        ResonanceWeb.removeNode(c.id);
+        visualRipples.push({x: c.x, y: c.y, r: 0, maxR: 150, color: '#8a4a3a', alpha: 0.4});
+      }
+    }
+
+    // Propagate resonance
+    ResonanceWeb.propagate(creatures);
+    ResonanceWeb.updateWorldMemory();
+
+    // Respawn occasionally to keep demo alive
+    var aliveCount = creatures.filter(function(c){ return c.alive; }).length;
+    if(aliveCount < 15 && Math.random() < 0.02){
+      var parent = creatures.filter(function(c){ return c.alive; })[Math.floor(Math.random() * aliveCount)];
+      if(parent){
+        spawnCreature(parent.x + (Math.random()-0.5)*30, parent.y + (Math.random()-0.5)*30);
+      }
+    }
+  }
+
+  function draw(){
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+    ctx.fillRect(0, 0, W, H);
+
+    var nodes = ResonanceWeb.getNodes();
+
+    // Draw edges
+    for(var id in nodes){
+      var n = nodes[id];
+      var edges = Object.keys(n.edges);
+      for(var i = 0; i < edges.length; i++){
+        var target = nodes[edges[i]];
+        if(!target || edges[i] <= id) continue;
+        var weight = n.edges[edges[i]];
+        ctx.beginPath();
+        ctx.moveTo(n.x, n.y);
+        ctx.lineTo(target.x, target.y);
+        ctx.strokeStyle = 'rgba(200, 168, 74, ' + (weight * 0.3) + ')';
+        ctx.lineWidth = weight * 2;
+        ctx.stroke();
+      }
+    }
+
+    // Draw world memories
+    var memories = ResonanceWeb.getWorldMemory();
+    for(var i = 0; i < memories.length; i++){
+      var m = memories[i];
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, 3 + m.strength * 10, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(138, 74, 58, ' + (m.strength * 0.5) + ')';
+      ctx.fill();
+    }
+
+    // Draw creatures
+    for(var i = 0; i < creatures.length; i++){
+      var c = creatures[i];
+      if(!c.alive){
+        if(c.dying){
+          // Fade out dead
+          ctx.beginPath();
+          ctx.arc(c.x, c.y, c.size * 0.5, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(80, 50, 40, 0.3)';
+          ctx.fill();
+        }
+        continue;
+      }
+
+      // Mood glow
+      var glowR = c.size * 3 + Math.abs(c.mood) * 8;
+      var grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, glowR);
+      if(c.mood > 0){
+        grad.addColorStop(0, 'rgba(212, 168, 67, ' + (c.mood * 0.15) + ')');
+      } else {
+        grad.addColorStop(0, 'rgba(74, 106, 138, ' + (-c.mood * 0.15) + ')');
+      }
+      grad.addColorStop(1, 'rgba(10, 10, 15, 0)');
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, glowR, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Body
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+      ctx.fillStyle = c.color;
+      ctx.fill();
+    }
+
+    // Visual ripples
+    for(var i = visualRipples.length - 1; i >= 0; i--){
+      var r = visualRipples[i];
+      r.r += 3;
+      r.alpha -= 0.008;
+      if(r.alpha <= 0){ visualRipples.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+      ctx.strokeStyle = r.color.replace(')', ', ' + r.alpha + ')').replace('rgb', 'rgba');
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Stats
+    var alive = creatures.filter(function(c){ return c.alive; }).length;
+    var edgeCount = 0;
+    for(var id in nodes) edgeCount += Object.keys(nodes[id].edges).length;
+    statsEl.textContent = 'nodes: ' + alive + ' | bonds: ' + Math.floor(edgeCount/2) + ' | world memories: ' + memories.length + ' | accumulator: ' + ResonanceWeb.getHiddenAccumulator().toFixed(1);
+  }
+
+  function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
+</body>
+</html>
