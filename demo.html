@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Resonance Web — Live Demo</title>
+<title>Resonance Web: Live Demo</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0a0a0f; color: #c8b88a; font-family: 'Georgia', serif; overflow: hidden; }
@@ -61,7 +61,7 @@
   var world = ResonanceWeb.initFromSeed("demo-world");
   var clusters = world.generate(Math.min(W, H));
 
-  // Create creatures — use a fixed-size pool to prevent memory growth
+  // Create creatures: use a fixed-size pool to prevent memory growth
   var MAX_CREATURES = 80;
   var creatures = [];
   var idCounter = 0;
@@ -107,6 +107,13 @@
     }
   }
 
+  // Knowledge sources: something to observe near each cluster. Nobody starts knowing it.
+  var ITEMS = ['fire', 'salt', 'song', 'stone', 'weave'];
+  for(var si = 0; si < clusters.length; si++){
+    ResonanceWeb.addKnowledgeSource(ITEMS[si % ITEMS.length], clusters[si].x, clusters[si].y, 70);
+  }
+  var lostItems = [];
+
   // Visual ripples
   var visualRipples = [];
 
@@ -123,7 +130,7 @@
     visualRipples.push({x: e.clientX, y: e.clientY, r: 0, maxR: 200, cr: 74, cg: 106, cb: 138, alpha: 0.6});
   });
 
-  // Cleanup interval — remove dead creatures periodically to prevent array bloat
+  // Cleanup interval: remove dead creatures periodically to prevent array bloat
   var cleanupTimer = 0;
 
   function update(){
@@ -198,8 +205,13 @@
       creatures = creatures.filter(function(c){ return c.alive; });
     }
 
+    ResonanceWeb.observe();
     ResonanceWeb.propagate(creatures);
     ResonanceWeb.updateWorldMemory();
+    var evs = ResonanceWeb.takeEvents();
+    for(var k = 0; k < evs.length; k++){
+      if(evs[k].type === 'knowledge-lost') lostItems.push(evs[k].item);
+    }
 
     // Respawn to keep demo alive
     if(aliveCount < 15 && Math.random() < 0.02){
@@ -290,7 +302,11 @@
     for(var i = 0; i < creatures.length; i++) if(creatures[i].alive) alive++;
     var edgeCount = 0;
     for(var id in nodes) edgeCount += Object.keys(nodes[id].edges).length;
-    statsEl.textContent = 'nodes: ' + alive + ' | bonds: ' + Math.floor(edgeCount/2) + ' | world memories: ' + memories.length + ' | accumulator: ' + ResonanceWeb.getHiddenAccumulator().toFixed(1);
+    var known = ResonanceWeb.getKnownItems(), knownText = [];
+    for(var it in known) knownText.push(it + ' ' + known[it]);
+    // The hidden accumulator is deliberately not shown.
+    statsEl.textContent = 'nodes: ' + alive + ' | bonds: ' + Math.floor(edgeCount/2) + ' | world memories: ' + memories.length +
+      ' | known: ' + (knownText.join(', ') || 'nothing yet') + ' | lost forever: ' + (lostItems.join(', ') || 'none');
   }
 
   function loop(){

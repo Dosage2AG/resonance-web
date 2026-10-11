@@ -1,7 +1,7 @@
 {
   "name": "resonance-web",
   "version": "0.1.0",
-  "description": "A living network engine where every node is both signal and structure. Knowledge propagates through observation, strengthens through bonds, and dies when forgotten.",
+  "description": "A small network engine where knowledge is earned by observing or being taught, travels through bonds, and dies with its last holder.",
   "main": "resonance-web.js",
   "keywords": [
     "network",
@@ -20,5 +20,8 @@
     "type": "git",
     "url": "https://github.com/Dosage2AG/resonance-web"
   },
-  "homepage": "https://github.com/Dosage2AG/resonance-web"
+  "homepage": "https://github.com/Dosage2AG/resonance-web",
+  "scripts": {
+    "test": "node test.js"
+  }
 }
